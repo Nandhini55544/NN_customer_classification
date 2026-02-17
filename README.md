@@ -14,7 +14,7 @@ You are required to help the manager to predict the right group of the new custo
 
 ## Neural Network Model
 
-<img width="901" height="905" alt="image" src="https://github.com/user-attachments/assets/e0b1af2c-f72d-4ad6-a89b-c1954f173227" />
+<img width="898" height="917" alt="image" src="https://github.com/user-attachments/assets/4f917051-bbc9-4eed-812b-0608b3720e66" />
 
 
 ## DESIGN STEPS
@@ -168,24 +168,26 @@ print(f"Actual class for sample input: {actual_class}")
 
 ## Dataset Information
 
-<img width="908" height="484" alt="image" src="https://github.com/user-attachments/assets/04214dfc-554b-4248-91c9-f42de6594115" />
+<img width="908" height="484" alt="image" src="https://github.com/user-attachments/assets/bed652b0-fd4e-4df4-95cf-09096ae46423" />
 
 ## OUTPUT
 
-<img width="608" height="530" alt="image" src="https://github.com/user-attachments/assets/b4b3550a-b0e7-4d36-b612-7cb2ebd65745" />
+<img width="729" height="509" alt="image" src="https://github.com/user-attachments/assets/c68cd152-587b-465e-9def-ed28c2d21d5f" />
+
 
 ### Confusion Matrix
 
-<img width="571" height="569" alt="image" src="https://github.com/user-attachments/assets/4d712c1d-d1c5-4cae-bce2-ce498f609f19" />
+<img width="565" height="562" alt="image" src="https://github.com/user-attachments/assets/8371f11d-4f09-408f-aa4c-5eeae6abb6ef" />
+
 
 ### Classification Report
 
-<img width="438" height="277" alt="image" src="https://github.com/user-attachments/assets/d81fe412-7947-470d-b921-0e4d96128f60" />
+<img width="447" height="264" alt="image" src="https://github.com/user-attachments/assets/204fb028-02b2-40f4-b620-4a29965fe58e" />
 
 
 ### New Sample Data Prediction
 
-<img width="296" height="89" alt="image" src="https://github.com/user-attachments/assets/56ffe9e8-ece4-42c6-8b38-8e51097c454b" />
+<img width="290" height="88" alt="image" src="https://github.com/user-attachments/assets/32e5db1a-f2f4-425b-8a11-4f4a62114b89" />
 
 
 ## RESULT
