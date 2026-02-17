@@ -14,7 +14,7 @@ You are required to help the manager to predict the right group of the new custo
 
 ## Neural Network Model
 
-<img width="1209" height="799" alt="image" src="https://github.com/user-attachments/assets/2a210679-0a23-4590-9a97-84b5380f5907" />
+<img width="901" height="905" alt="image" src="https://github.com/user-attachments/assets/e0b1af2c-f72d-4ad6-a89b-c1954f173227" />
 
 
 ## DESIGN STEPS
@@ -38,66 +38,154 @@ Evaluate the trained model using test data and use it to predict the customer se
 ### Register Number: 212224040211
 
 ```python
-# Define Neural Network(Model1)
+!pip install pandas scikit-learn openpyxl matplotlib seaborn torch -q
+
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import confusion_matrix, classification_report
+from google.colab import files
+
+uploaded = files.upload()
+
+df = pd.read_excel("customers.xlsx")
+
+print(df.head())
+print("\nColumns:\n", df.columns)
+
+df = df.drop(columns=["ID"])
+
+for col in df.columns:
+    if df[col].dtype == 'object':
+        df[col].fillna(df[col].mode()[0], inplace=True)
+    else:
+        df[col].fillna(df[col].median(), inplace=True)
+
+le = LabelEncoder()
+for col in df.columns:
+    if df[col].dtype == 'object':
+        df[col] = le.fit_transform(df[col])
+
+X = df.drop("Segmentation", axis=1).values
+y = df["Segmentation"].values
+
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+X_train = torch.tensor(X_train, dtype=torch.float32)
+X_test  = torch.tensor(X_test, dtype=torch.float32)
+y_train = torch.tensor(y_train, dtype=torch.long)
+y_test  = torch.tensor(y_test, dtype=torch.long)
+
 class PeopleClassifier(nn.Module):
     def __init__(self, input_size):
-        super(PeopleClassifier, self).__init__()
-        self.fc1 = nn.Linear(input_size, 32)
-        self.fc2 = nn.Linear(32, 16)
-        self.fc3 = nn.Linear(16, 8)
-        self.fc4 = nn.Linear(8, 4)
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, 16)
+        self.fc2 = nn.Linear(16, 8)
+        self.fc3 = nn.Linear(8, 4)
+
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+        return self.fc3(x)
 
-```
-
-```python
-# Initialize the Model, Loss Function, and Optimizer
-model = PeopleClassifier(input_size=X_train.shape[1])
+model = PeopleClassifier(X_train.shape[1])
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(),lr=0.001)
-train_model(model, train_loader, criterion, optimizer, epochs=100)
+optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-```
-
-```python
-#function to train the model
-def train_model(model, train_loader, criterion, optimizer, epochs):
+for epoch in range(100):
     model.train()
-    for epoch in range(epochs):
-        for inputs, labels in train_loader:
-          optimizer.zero_grad()
-          outputs=model(inputs)
-          loss=criterion(outputs, labels)
-          loss.backward()
-          optimizer.step()
-    if (epoch + 1) % 10 == 0:
-        print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
+    optimizer.zero_grad()
+    outputs = model(X_train)
+    loss = criterion(outputs, y_train)
+    loss.backward()
+    optimizer.step()
+
+    if (epoch+1) % 10 == 0:
+        print(f'Epoch [{epoch+1}/100], Loss: {loss.item():.4f}')
+
+model.eval()
+with torch.no_grad():
+    outputs = model(X_test)
+    _, preds = torch.max(outputs, 1)
+
+labels = np.unique(y_test)
+cm = confusion_matrix(y_test, preds, labels=labels)
+
+print("\nNAME: NANDHINI M")
+print("REG NO: 212224040211")
+
+print("\nConfusion Matrix:")
+print(cm)
+
+plt.figure(figsize=(6,5))
+sns.heatmap(cm, annot=True, fmt='d',
+            xticklabels=labels,
+            yticklabels=labels)
+
+plt.xlabel("Predicted Labels")
+plt.ylabel("True Labels")
+plt.title("Confusion Matrix")
+
+plt.text(-0.5, len(labels)+0.7,
+         "NANDHINI M\n212224040211",
+         fontsize=10)
+
+plt.show()
+
+print("\nNAME: NANDHINI M")
+print("REG NO: 212224040211\n")
+
+print("Classification Report:\n")
+print(classification_report(y_test, preds))
+
+sample_index = 0
+sample = X_test[sample_index].unsqueeze(0)
+
+with torch.no_grad():
+    prediction = model(sample)
+    predicted_class = torch.argmax(prediction, 1).item()
+    actual_class = y_test[sample_index].item()
+
+print("\nNew Sample Data Prediction")
+print("NAME: NANDHINI M")
+print("REG NO: 212224040211")
+print(f"Predicted class for sample input: {predicted_class}")
+print(f"Actual class for sample input: {actual_class}")
+
 ```
 
 ## Dataset Information
 
-<img width="1191" height="242" alt="image" src="https://github.com/user-attachments/assets/8c310b54-5115-49ae-ab17-ceacfaeb026f" />
+<img width="908" height="484" alt="image" src="https://github.com/user-attachments/assets/04214dfc-554b-4248-91c9-f42de6594115" />
 
 ## OUTPUT
 
+<img width="608" height="530" alt="image" src="https://github.com/user-attachments/assets/b4b3550a-b0e7-4d36-b612-7cb2ebd65745" />
+
 ### Confusion Matrix
 
-<img width="649" height="551" alt="image" src="https://github.com/user-attachments/assets/75eda3ba-c4d2-49fa-9425-21c2c4dcc09c" />
-
+<img width="571" height="569" alt="image" src="https://github.com/user-attachments/assets/4d712c1d-d1c5-4cae-bce2-ce498f609f19" />
 
 ### Classification Report
 
-<img width="1211" height="648" alt="image" src="https://github.com/user-attachments/assets/b07597b7-c923-4b51-9c2e-f1a0ff4a57f2" />
+<img width="438" height="277" alt="image" src="https://github.com/user-attachments/assets/d81fe412-7947-470d-b921-0e4d96128f60" />
 
 
 ### New Sample Data Prediction
 
-<img width="1608" height="173" alt="image" src="https://github.com/user-attachments/assets/83d7f5da-85ac-499c-8c69-27702b558570" />
+<img width="296" height="89" alt="image" src="https://github.com/user-attachments/assets/56ffe9e8-ece4-42c6-8b38-8e51097c454b" />
 
 
 ## RESULT
