@@ -40,154 +40,137 @@ Evaluate the trained model using test data and use it to predict the customer se
 ```python
 !pip install pandas scikit-learn openpyxl matplotlib seaborn torch -q
 
-import pandas as pd
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
-import seaborn as sns
-
+import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.metrics import confusion_matrix, classification_report
-from google.colab import files
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from torch.utils.data import TensorDataset, DataLoader
 
-uploaded = files.upload()
+data = pd.read_csv("/content/customers.csv")
+data.head()
 
-df = pd.read_excel("customers.xlsx")
+data.columns
 
-print(df.head())
-print("\nColumns:\n", df.columns)
+data = data.drop(columns=["ID"])
 
-df = df.drop(columns=["ID"])
+data.fillna({"Work_Experience": 0, "Family_Size": data["Family_Size"].median()}, inplace=True)
 
-for col in df.columns:
-    if df[col].dtype == 'object':
-        df[col].fillna(df[col].mode()[0], inplace=True)
-    else:
-        df[col].fillna(df[col].median(), inplace=True)
+categorical_columns = ["Gender", "Ever_Married", "Graduated", "Profession", "Spending_Score", "Var_1"]
+for col in categorical_columns:
+    data[col] = LabelEncoder().fit_transform(data[col])
 
-le = LabelEncoder()
-for col in df.columns:
-    if df[col].dtype == 'object':
-        df[col] = le.fit_transform(df[col])
+label_encoder = LabelEncoder()
+data["Segmentation"] = label_encoder.fit_transform(data["Segmentation"])
 
-X = df.drop("Segmentation", axis=1).values
-y = df["Segmentation"].values
+X = data.drop(columns=["Segmentation"])
+y = data["Segmentation"].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 scaler = StandardScaler()
-X = scaler.fit_transform(X)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
 X_train = torch.tensor(X_train, dtype=torch.float32)
-X_test  = torch.tensor(X_test, dtype=torch.float32)
+X_test = torch.tensor(X_test, dtype=torch.float32)
 y_train = torch.tensor(y_train, dtype=torch.long)
-y_test  = torch.tensor(y_test, dtype=torch.long)
+y_test = torch.tensor(y_test, dtype=torch.long)
+
+train_dataset = TensorDataset(X_train, y_train)
+test_dataset = TensorDataset(X_test, y_test)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=16)
 
 class PeopleClassifier(nn.Module):
     def __init__(self, input_size):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 16)
-        self.fc2 = nn.Linear(16, 8)
-        self.fc3 = nn.Linear(8, 4)
+        super(PeopleClassifier, self).__init__()
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 4)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        x = self.fc3(x)
+        return x
+
+def train_model(model, train_loader, criterion, optimizer, epochs):
+    for epoch in range(epochs):
+        model.train()
+        for X_batch, y_batch in train_loader:
+            optimizer.zero_grad()
+            outputs = model(X_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+        if (epoch + 1) % 10 == 0:
+            print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
 model = PeopleClassifier(X_train.shape[1])
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.01)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-for epoch in range(100):
-    model.train()
-    optimizer.zero_grad()
-    outputs = model(X_train)
-    loss = criterion(outputs, y_train)
-    loss.backward()
-    optimizer.step()
-
-    if (epoch+1) % 10 == 0:
-        print(f'Epoch [{epoch+1}/100], Loss: {loss.item():.4f}')
+train_model(model, train_loader, criterion, optimizer, epochs=50)
 
 model.eval()
+predictions, actuals = [], []
 with torch.no_grad():
-    outputs = model(X_test)
-    _, preds = torch.max(outputs, 1)
+    for X_batch, y_batch in test_loader:
+        outputs = model(X_batch)
+        _, predicted = torch.max(outputs, 1)
+        predictions.extend(predicted.numpy())
+        actuals.extend(y_batch.numpy())
 
-labels = np.unique(y_test)
-cm = confusion_matrix(y_test, preds, labels=labels)
+accuracy = accuracy_score(actuals, predictions)
+conf_matrix = confusion_matrix(actuals, predictions)
+class_report = classification_report(actuals, predictions, target_names=[str(i) for i in label_encoder.classes_])
+print("Name:          Nandhini M")
+print("Register No:   212224040211")
+print(f'Test Accuracy: {accuracy:.2f}%')
+print("Confusion Matrix:\n", conf_matrix)
+print("Classification Report:\n", class_report)
 
-print("\nNAME: NANDHINI M")
-print("REG NO: 212224040211")
-
-print("\nConfusion Matrix:")
-print(cm)
-
-plt.figure(figsize=(6,5))
-sns.heatmap(cm, annot=True, fmt='d',
-            xticklabels=labels,
-            yticklabels=labels)
-
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.heatmap(conf_matrix, annot=True, cmap='Blues', xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_,fmt='g')
 plt.xlabel("Predicted Labels")
 plt.ylabel("True Labels")
 plt.title("Confusion Matrix")
-
-plt.text(-0.5, len(labels)+0.7,
-         "NANDHINI M\n212224040211",
-         fontsize=10)
-
 plt.show()
 
-print("\nNAME: NANDHINI M")
-print("REG NO: 212224040211\n")
-
-print("Classification Report:\n")
-print(classification_report(y_test, preds))
-
-sample_index = 0
-sample = X_test[sample_index].unsqueeze(0)
-
+sample_input = X_test[12].clone().unsqueeze(0).detach().type(torch.float32)
 with torch.no_grad():
-    prediction = model(sample)
-    predicted_class = torch.argmax(prediction, 1).item()
-    actual_class = y_test[sample_index].item()
-
-print("\nNew Sample Data Prediction")
-print("NAME: NANDHINI M")
-print("REG NO: 212224040211")
-print(f"Predicted class for sample input: {predicted_class}")
-print(f"Actual class for sample input: {actual_class}")
-
+    output = model(sample_input)
+    predicted_class_index = torch.argmax(output[0]).item()
+    predicted_class_label = label_encoder.inverse_transform([predicted_class_index])[0]
+print("Name:          Nandhini M")
+print("Register No:   212224040211")
+print(f'Predicted class for sample input: {predicted_class_label}')
+print(f'Actual class for sample input: {label_encoder.inverse_transform([y_test[12].item()])[0]}')
 ```
 
 ## Dataset Information
 
-<img width="908" height="484" alt="image" src="https://github.com/user-attachments/assets/bed652b0-fd4e-4df4-95cf-09096ae46423" />
+<img width="1006" height="212" alt="image" src="https://github.com/user-attachments/assets/3cebb28c-5b7a-4075-8622-2030c166fa89" />
 
 ## OUTPUT
 
-<img width="729" height="509" alt="image" src="https://github.com/user-attachments/assets/c68cd152-587b-465e-9def-ed28c2d21d5f" />
+<img width="484" height="346" alt="image" src="https://github.com/user-attachments/assets/fe11fcb6-403a-440d-9208-7c38158b2885" />
 
 
 ### Confusion Matrix
 
-<img width="565" height="562" alt="image" src="https://github.com/user-attachments/assets/8371f11d-4f09-408f-aa4c-5eeae6abb6ef" />
-
-
-### Classification Report
-
-<img width="447" height="264" alt="image" src="https://github.com/user-attachments/assets/204fb028-02b2-40f4-b620-4a29965fe58e" />
+<img width="551" height="463" alt="image" src="https://github.com/user-attachments/assets/ffa846d0-c390-4472-9c55-1edd7c6f6a84" />
 
 
 ### New Sample Data Prediction
 
-<img width="290" height="88" alt="image" src="https://github.com/user-attachments/assets/32e5db1a-f2f4-425b-8a11-4f4a62114b89" />
+<img width="282" height="83" alt="image" src="https://github.com/user-attachments/assets/cd74fb2a-753b-4bb8-940a-2cf7084d12fd" />
 
 
 ## RESULT
